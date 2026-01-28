@@ -152,10 +152,12 @@ Content-Type: application/json
 
 ## Security Notes
 
-- API key is stored in browser's localStorage
+- API key is stored in plain text in browser's localStorage (not encrypted)
+- localStorage is accessible to JavaScript, so only use this app on trusted computers
 - Never commit your API key to version control
 - The app runs entirely client-side (no server required)
 - All API calls are made directly from the browser
+- Consider implementing Content Security Policy headers for additional protection
 
 ## Troubleshooting
 

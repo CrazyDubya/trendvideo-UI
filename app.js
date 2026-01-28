@@ -178,6 +178,10 @@ class TrendVideoApp {
 
             const searchData = await searchResponse.json();
             const orbitId = searchData.orbitId;
+            
+            if (!orbitId) {
+                throw new Error('No orbit ID returned from API');
+            }
 
             // Step 2: Wait a bit for processing (typically 10-30 seconds)
             await this.delay(15000);
@@ -195,8 +199,13 @@ class TrendVideoApp {
 
             const resultsData = await resultsResponse.json();
             
+            // Validate API response structure
+            if (!resultsData || !Array.isArray(resultsData.videos)) {
+                throw new Error('Invalid API response structure');
+            }
+            
             // Get top 25 videos
-            const videos = (resultsData.videos || []).slice(0, 25);
+            const videos = resultsData.videos.slice(0, 25);
             
             // Cache and display results
             this.cacheResults(platform, videos);
@@ -205,6 +214,7 @@ class TrendVideoApp {
         } catch (error) {
             // If real API fails, use mock data for demonstration
             console.warn(`API call failed for ${platform}, using mock data:`, error);
+            this.showStatus(`⚠️ API unavailable, showing demo data for ${platform}`, 'info');
             const mockVideos = this.generateMockVideos(platform, 25);
             this.displayVideos(platform, mockVideos);
         }
