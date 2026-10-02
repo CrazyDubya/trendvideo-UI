@@ -152,65 +152,71 @@ class TrendVideoApp {
     }
 
     async fetchPlatformVideos(platform) {
-        // Step 1: Queue a keyword search for trending content
-        const keywords = platform === 'tiktok' 
-            ? ['trending', 'viral', 'fyp']
-            : ['trending', 'shorts', 'viral'];
-        
+        // Use Virlo API's /videos/digest endpoint for trending content
         try {
-            // Create search request
-            const searchResponse = await fetch('https://api.virlo.ai/orbit/keyword-search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    name: `${platform} Trending Search`,
-                    keywords: keywords,
-                    platform: platform === 'tiktok' ? 'tiktok' : 'youtube'
-                })
+            // Build URL with query parameters
+            const params = new URLSearchParams({
+                limit: '25'
             });
 
-            if (!searchResponse.ok) {
-                throw new Error(`API request failed: ${searchResponse.status}`);
+            // Add platform-specific niche if available
+            if (platform === 'tiktok') {
+                // TikTok-focused niches
+            } else if (platform === 'youtube') {
+                // YouTube-focused content
             }
 
-            const searchData = await searchResponse.json();
-            const orbitId = searchData.orbitId;
-            
-            if (!orbitId) {
-                throw new Error('No orbit ID returned from API');
-            }
-
-            // Step 2: Wait a bit for processing (typically 10-30 seconds)
-            await this.delay(15000);
-
-            // Step 3: Fetch results
-            const resultsResponse = await fetch(`https://api.virlo.ai/orbit/results/${orbitId}`, {
+            const response = await fetch(`https://api.virlo.ai/videos/digest?${params}`, {
+                method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`
                 }
             });
 
-            if (!resultsResponse.ok) {
-                throw new Error(`Failed to fetch results: ${resultsResponse.status}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `API request failed: ${response.status}`);
             }
 
-            const resultsData = await resultsResponse.json();
-            
+            const responseData = await response.json();
+
             // Validate API response structure
-            if (!resultsData || !Array.isArray(resultsData.videos)) {
+            if (!responseData || !Array.isArray(responseData.data)) {
                 throw new Error('Invalid API response structure');
             }
-            
-            // Get top 25 videos
-            const videos = resultsData.videos.slice(0, 25);
-            
+
+            // Filter videos by platform type
+            let videos = responseData.data;
+            if (platform === 'tiktok') {
+                videos = videos.filter(v => v.type === 'tiktok');
+            } else if (platform === 'youtube') {
+                videos = videos.filter(v => v.type === 'youtube');
+            }
+
+            // If not enough platform-specific videos, use all
+            if (videos.length < 10) {
+                videos = responseData.data;
+            }
+
+            // Transform to consistent format and get top 25
+            const transformedVideos = videos.slice(0, 25).map(video => ({
+                id: video.id,
+                title: video.description ? video.description.substring(0, 100) : 'Trending Video',
+                creator: video.author_id ? `@creator_${video.author_id.substring(0, 8)}` : '@unknown',
+                views: video.views || 0,
+                likes: video.number_of_likes || 0,
+                comments: video.number_of_comments || 0,
+                thumbnail: video.thumbnail_url || 'https://via.placeholder.com/300x400/667eea/ffffff?text=Video',
+                url: video.url || '#',
+                uploadDate: video.publish_date || new Date().toISOString(),
+                platform: video.type || platform,
+                niche: video.niche || 'unknown'
+            }));
+
             // Cache and display results
-            this.cacheResults(platform, videos);
-            this.displayVideos(platform, videos);
-            
+            this.cacheResults(platform, transformedVideos);
+            this.displayVideos(platform, transformedVideos);
+
         } catch (error) {
             // If real API fails, use mock data for demonstration
             console.warn(`API call failed for ${platform}, using mock data:`, error);
