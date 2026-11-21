@@ -135,15 +135,20 @@ class TrendVideoApp {
         this.showStatus('Fetching trending videos... This may take a moment', 'loading');
 
         try {
+            const demoPlatforms = [];
             if (platform === 'both' || platform === 'tiktok') {
-                await this.fetchPlatformVideos('tiktok');
+                if (!await this.fetchPlatformVideos('tiktok')) demoPlatforms.push('tiktok');
             }
             
             if (platform === 'both' || platform === 'youtube') {
-                await this.fetchPlatformVideos('youtube');
+                if (!await this.fetchPlatformVideos('youtube')) demoPlatforms.push('youtube');
             }
             
-            this.showStatus('Videos fetched successfully!', 'success');
+            if (demoPlatforms.length) {
+                this.showStatus(`API unavailable for ${demoPlatforms.join(', ')}. Showing demo data for those platforms.`, 'info');
+            } else {
+                this.showStatus('Videos fetched successfully!', 'success');
+            }
         } catch (error) {
             console.error('Error fetching videos:', error);
             this.showStatus(`Error: ${error.message}`, 'error');
@@ -219,13 +224,15 @@ class TrendVideoApp {
             // Cache and display results
             this.cacheResults(platform, transformedVideos);
             this.displayVideos(platform, transformedVideos);
+            return true;
 
         } catch (error) {
             // If real API fails, use mock data for demonstration
             console.warn(`API call failed for ${platform}, using mock data:`, error);
             this.showStatus(`⚠️ API unavailable, showing demo data for ${platform}`, 'info');
             const mockVideos = this.generateMockVideos(platform, 25);
-            this.displayVideos(platform, mockVideos);
+            this.displayVideos(platform, mockVideos, { demo: true });
+            return false;
         }
     }
 
@@ -282,13 +289,15 @@ class TrendVideoApp {
         return mockVideos;
     }
 
-    displayVideos(platform, videos) {
+    displayVideos(platform, videos, { demo = false } = {}) {
         const resultsDiv = document.getElementById(`${platform}Results`);
         const gridDiv = document.getElementById(`${platform}Grid`);
         const lastUpdatedDiv = document.getElementById(`${platform}LastUpdated`);
         
         resultsDiv.style.display = 'block';
-        lastUpdatedDiv.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        lastUpdatedDiv.textContent = demo
+            ? `Demo data (API unavailable). Generated: ${new Date().toLocaleString()}`
+            : `Last updated: ${new Date().toLocaleString()}`;
         
         gridDiv.innerHTML = videos.map((video, index) => `
             <div class="video-card" onclick="window.open('${video.url}', '_blank')">
