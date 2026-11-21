@@ -106,11 +106,14 @@ class TrendVideoApp {
             const now = new Date();
             const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
+            const currentDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const scheduledMinute = `${currentDay}T${currentTime}`;
+
             if (this.scheduledTimes.includes(currentTime)) {
                 // Check if we already fetched in this minute
                 const lastFetch = localStorage.getItem('lastScheduledFetch');
-                if (lastFetch !== currentTime) {
-                    localStorage.setItem('lastScheduledFetch', currentTime);
+                if (lastFetch !== scheduledMinute) {
+                    localStorage.setItem('lastScheduledFetch', scheduledMinute);
                     this.showStatus(`Scheduled fetch triggered at ${currentTime}`, 'info');
                     this.fetchTrendingVideos('both');
                 }
